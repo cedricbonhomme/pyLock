@@ -36,7 +36,7 @@ def generatePort():
     modulo = nombre_aleatoire % 30
     nombre_aleatoire = abs(nombre_aleatoire - modulo)
     nombre_aleatoire = nombre_aleatoire + reduce(operator.add, [int(nombre) + 42 \
-                    for nombre in str(nombre_aleatoire - 32)])
+                    for nombre in str(abs(nombre_aleatoire - 32))])
     if nombre_aleatoire < 1024:
         nombre_aleatoire = nombre_aleatoire + 1024
     return nombre_aleatoire
@@ -50,7 +50,7 @@ def generateNumber():
     nombre_aleatoire = int(time.time() % 8000)
     modulo = nombre_aleatoire % 5
     nombre_aleatoire = abs(nombre_aleatoire - modulo)
-    return nombre_aleatoire + reduce(operator.add, [int(nombre) + 69 for nombre in str(nombre_aleatoire - 42)])
+    return nombre_aleatoire + reduce(operator.add, [int(nombre) + 69 for nombre in str(abs(nombre_aleatoire - 42))])
 
 
 if __name__ == '__main__':
@@ -60,12 +60,12 @@ if __name__ == '__main__':
     client = Client(adresse, port)
 
     # génération du mot de passe pseudo-aléatoire
-    hashMD5 = hashlib.md5()
-    hashMD5.update(str(generateNumber()))
-    data = hashMD5.hexdigest()
+    hashSHA224 = hashlib.sha224()
+    hashSHA224.update(str(generateNumber()))
+    data = hashSHA224.hexdigest()
 
-    #data = "open:"+data # demande l'ouverture du port ssh
-    data = "clos:"+data # demande la fermeture du port ssh
+    data = "open:"+data # demande l'ouverture du port ssh
+    #data = "clos:"+data # demande la fermeture du port ssh
 
     print "Envoie de", data
     client.send(data) # envoie la demande
