@@ -9,6 +9,10 @@ import operator
 import threading
 
 class Client(object):
+    """Classe client.
+
+    Représente la clé de la serrure sécurisée.
+    """
     def __init__(self, adresseDistante, portDistant):
         self.adresseDistante = adresseDistante
         self.portDistant = portDistant
@@ -29,14 +33,16 @@ class Client(object):
         #s.close()
         #print 'Received', repr(data)
 
-def generatePort():
+def generatePort(delta=0):
     """
     Génère un port aléatoirement.
     Basé sur EPOCH (temps passé depuis 1970).
+
+    delta représente la marge d'erreur possible en secondes.
     """
     heure = int(time.strftime("%H", time.localtime()))
     jour = int(time.strftime("%d", time.localtime()))
-    nombre_aleatoire = int(time.time() % 8000)
+    nombre_aleatoire = (int(time.time()) - delta) % 8000
     modulo = nombre_aleatoire % 30
     nombre_aleatoire = abs(nombre_aleatoire - modulo)
     nombre_aleatoire = nombre_aleatoire + reduce(operator.add, [int(nombre) + heure \
@@ -52,7 +58,7 @@ def generateNumber():
     Basé sur EPOCH (temps passé depuis 1970).
     """
     nombre_aleatoire = int(time.time() % 8000)
-    modulo = nombre_aleatoire % 5
+    modulo = nombre_aleatoire % 25
     nombre_aleatoire = abs(nombre_aleatoire - modulo)
     return nombre_aleatoire + reduce(operator.add, [int(nombre) + 69 for nombre in str(abs(nombre_aleatoire - 42))])
 
@@ -68,8 +74,15 @@ if __name__ == '__main__':
         exit(1)
 
     port = generatePort()
-    print "Tentative de connexion sur :", (adresse, port)
-    client = Client(adresse, port)
+    port_delta = generatePort(30)
+    try:
+        client = Client(adresse, port)
+        print "Connexion sur :", (adresse, port)
+    except socket.error:
+        # dans le cas où le client a quelques secondes d'avances (<=30s)
+        client = Client(adresse, port_delta)
+        print "Connexion sur :", (adresse, port_delta)
+
 
     # génération du mot de passe pseudo-aléatoire
     hashSHA224 = hashlib.sha224()

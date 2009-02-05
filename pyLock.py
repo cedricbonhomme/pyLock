@@ -9,11 +9,15 @@ import operator
 import threading
 
 class Serveur(object):
+    """Classe Serveur
+
+    Représente la serrure sécurisée.
+    """
     def __init__(self, portLocal):
         """
         Initialise le socket
         """
-        self.host = "127.0.0.1"
+        self.host = "0.0.0.0"
         self.port = portLocal
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setblocking(0)
@@ -30,6 +34,7 @@ class Serveur(object):
             try:
                 self.conn, addr = self.sock.accept()
                 self.conn.setblocking(1)
+		log("Tentative de connexion de " + str(addr))
 
                 print 'Connected by', addr
                 data = self.conn.recv(1024)
@@ -43,13 +48,19 @@ class Serveur(object):
                     if data[:4] == "open":
                         os.system("/etc/init.d/ssh start")
                         print "SSH lancé ..."
+			log("SSH lancé")
+			c = threading.Thread(None, close_after_log, None,)
+		        c.setDaemon(True)
+		        c.start()
                     elif data[:4] == "clos":
                         os.system("/etc/init.d/ssh stop")
                         print "SSH fermé ..."
+			log("SSH fermé...")
                 else:
                     print "Mauvaise phrase de passe."
+		    log("Connexion échouée.")
 
-            except socket.timeout:
+            except:
                 pass
         self.sock.close()
 
@@ -62,6 +73,27 @@ class Serveur(object):
             self.sock.close()
         except:
             print "Oups..."
+
+
+
+def close_after_log():
+    """Ferme SSH 30 secondes après l'ouverture de la serrure.
+    """
+    time.sleep(30)
+    os.system("/etc/init.d/ssh stop")
+
+
+def log(message):
+    """Save the log in the log file.
+    """
+    try:
+        log_location = "/home/cdjs/logPyHIDS/logLOCK"
+        log_file = open(log_location, "a")
+        log_file.write(message+"\n")
+    except Exception , e:
+	 print "Erreur", e
+    finally:
+    	log_file.close()
 
 def generatePort():
     """
@@ -85,7 +117,7 @@ def generateNumber():
     Basé sur EPOCH (temps passé depuis 1970).
     """
     nombre_aleatoire = int(time.time() % 8000)
-    modulo = nombre_aleatoire % 5
+    modulo = nombre_aleatoire % 25
     nombre_aleatoire = abs(nombre_aleatoire - modulo)
     return nombre_aleatoire + reduce(operator.add, [int(nombre) + 69 \
                     for nombre in str(abs(nombre_aleatoire - 42))])
@@ -95,25 +127,30 @@ if __name__ == '__main__':
     while True:
         # génération du port aléatoire
         numero_port = generatePort()
-        print "Création serveur sur port", numero_port
-
+        #print "Création serveur sur port", numero_port
+	log("Changement de port :" + str(numero_port))
         # le firewall autorise la connexion sur le nouveau port
-        os.system('./openFireWall.sh '+str(numero_port))
+        #print "Modification des règles du pare-feu"
+        os.system('/home/cdjs/pyLock/openFireWall.sh ' + str(numero_port))
+        os.system('/home/cdjs/pyLock/iptable.sh')
 
         # ouverture du port et création du socket
         serveur = Serveur(numero_port)
         a = threading.Thread(None, serveur.receive, None,)
         a.setDaemon(True)
-        print "Lancement serveur"
+        #print "Lancement serveur"
         a.start()
 
         time.sleep(30)
 
         # fermeture du port
-        print "Destruction serveur"
+        #print "Destruction serveur"
         serveur.close()
         del serveur
         del a
 
         # réinitialisation du firewall
-        os.system('./closeFireWall.sh '+str(numero_port))
+        #print "Réinitialisation du pare-feu"
+	time.sleep(1)
+        os.system('/home/cdjs/pyLock/closeFireWall.sh ' + str(numero_port))
+        os.system('/home/cdjs/pyLock/iptable.sh')
